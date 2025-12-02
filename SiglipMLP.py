@@ -6,11 +6,11 @@ class SiglipMLP(tf.keras.Model):
         self.config = config
         self.fc1 = tf.keras.layers.Dense(config.intermediate_size,
                                          input_shape=(config.hidden_size,),
-                                         activation=None, use_bias=False)
+                                         activation=None, use_bias=True)
 
         self.fc2 = tf.keras.layers.Dense(config.hidden_size,
                                          input_shape=(config.intermediate_size,),
-                                         activation=None, use_bias=False)
+                                         activation=None, use_bias=True)
 
     def call(self, hidden_states):
         hidden_states = self.fc1( hidden_states )

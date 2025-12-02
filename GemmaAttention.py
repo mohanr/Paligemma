@@ -21,8 +21,8 @@ class GemmaAttention(tf.keras.Model):
 
         # assert tf.math.floormod(self.hidden_size, self.num_heads) == 0
         self.q_proj = tf.keras.layers.Dense(self.hidden_size,activation=None, use_bias=config.attention_bias)
-        self.k_proj=tf.keras.layers.Dense(self.head_dim,activation=None, use_bias=config.attention_bias)
-        self.v_proj=tf.keras.layers.Dense(self.head_dim,activation=None, use_bias=config.attention_bias)
+        self.k_proj=tf.keras.layers.Dense(self.num_key_value_heads * self.head_dim,activation=None, use_bias=config.attention_bias)
+        self.v_proj=tf.keras.layers.Dense(self.num_key_value_heads * self.head_dim,activation=None, use_bias=config.attention_bias)
         self.o_proj= tf.keras.layers.Dense( self.num_heads * self.head_dim,activation=None, use_bias=config.attention_bias)
 
         self.rotary_emb = GemmaRotaryEmbedding(

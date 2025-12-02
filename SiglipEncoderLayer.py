@@ -5,7 +5,7 @@ from SiglipAttention import  SiglipAttention
 class SiglipEncoderLayer(tf.keras.Model):
 
     def __init__(self, config):
-        super(SiglipEncoderLayer,self).__init__()
+        super().__init__()
         self.config = config
         self.embed_dim = config.hidden_size
         self.self_attn = SiglipAttention(config)

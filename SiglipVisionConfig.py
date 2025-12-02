@@ -2,18 +2,20 @@ import tensorflow as tf
 
 class SiglipVisionConfig():
     def __init__(self,
-                 hidden_size = 768,
-                 intermediate_size = 3072,
-                 num_hidden_layers = 12,
-                 num_attention_heads = 8,
+                 hidden_size = 1152,
+                 intermediate_size = 4304,
+                 num_hidden_layers = 24,
+                 num_attention_heads = 16,
                  num_channels = 3,
                  image_size = 224,
-                 patch_size = 16,
+                 patch_size = 14,
                  layer_norm_eps = 1e-6,
                  attention_dropout = 0.0,
-                 num_image_tokens : int = 576
+                 projection_dim=2304,
+                 num_image_tokens : int = 256
                  ):
         super().__init__()
+        self.projection_dim=projection_dim
         self.hidden_size=hidden_size
         self.intermediate_size=intermediate_size
         self.num_hidden_layers=num_hidden_layers

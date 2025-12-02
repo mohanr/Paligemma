@@ -4,10 +4,10 @@ from SiglipEncoderLayer import SiglipEncoderLayer
 class SiglipEncoder(tf.keras.Model):
 
     def __init__(self, config):
-        super(SiglipEncoder,self).__init__()
+        super().__init__()
         self.config = config
 
-        self.layers = [SiglipEncoderLayer(config) for _ in range(config.num_hidden_layers)]
+        self._layers = [SiglipEncoderLayer(config) for _ in range(config.num_hidden_layers)]
 
 
     def call(self, inputs_embeds):

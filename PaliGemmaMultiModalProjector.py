@@ -6,7 +6,7 @@ class PaliGemmaMultiModalProjector(tf.keras.layers.Layer):
         super(PaliGemmaMultiModalProjector,self).__init__(
         )
 
-        self.linear = tf.keras.layers.Dense(config.vision_config.hidden_size,
+        self.linear = tf.keras.layers.Dense(2048,
                                             input_shape=config.vision_config.projection_dim,
                                             activation=None, use_bias=True)
 

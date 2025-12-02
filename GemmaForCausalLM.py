@@ -18,7 +18,7 @@ class GemmaForCausalLM(tf.keras.Model):
         return self.model.embed_tokens
 
     def tie_weights(self):
-        self.lm_head.weight = self.model.embed_tokens.weight
+        self.lm_head.kernel = self.model.embed_tokens.embeddings
 
     def call(self,
              attention_mask,

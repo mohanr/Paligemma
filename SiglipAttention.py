@@ -2,7 +2,7 @@ import tensorflow as tf
 
 class SiglipAttention(tf.keras.Model):
     def __init__(self, config):
-        super(SiglipAttention,self).__init__()
+        super().__init__()
         self.config = config
         self.embed_dim = config.hidden_size
         self.num_heads = config.num_attention_heads
@@ -18,7 +18,7 @@ class SiglipAttention(tf.keras.Model):
         self.v_proj = tf.keras.layers.Dense(self.embed_dim,
                                          input_shape=(self.embed_dim,),
                                          activation=None, use_bias=False)
-        self.out_proj = tf.keras.layers.Dense(self.embed_dim,
+        self.o_proj = tf.keras.layers.Dense(self.embed_dim,
                                          input_shape=(self.embed_dim,),
                                          activation=None, use_bias=False)
 
@@ -53,6 +53,6 @@ class SiglipAttention(tf.keras.Model):
         attn_output = tf.matmul(attn_weights,value_states)
         attn_output = tf.transpose(attn_output, perm=[0, 1, 2, 3])
         attn_output = tf.reshape( attn_output,(batch_size, seq_len, self.embed_dim))
-        attn_output = self.out_proj(attn_output)
+        attn_output = self.o_proj(attn_output)
         return attn_output, attn_weights
 

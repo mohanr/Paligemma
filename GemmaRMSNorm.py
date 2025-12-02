@@ -3,10 +3,10 @@ import tensorflow as tf
 class GemmaRMSNorm(tf.keras.Model):
     def __init__(self,
                  dim,
-                 eps : 1e06):
+                 eps : 1e-6):
         super().__init__()
-        self.eps = eps
-        self.weight = tf.Variable(tf.zeros((dim,)))
+        self.eps = 1e-6
+        self.weight = tf.Variable(tf.ones((dim,)))
 
     def _norm(self,x):
         return x * tf.math.rsqrt(tf.reduce_mean(tf.square(x), axis=-1, keepdims=True) + self.eps)
