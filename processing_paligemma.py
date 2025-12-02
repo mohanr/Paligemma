@@ -54,7 +54,7 @@ def process_images(
     images = [image * rescale_factor for image in images]
     images = [(image - image_mean) / image_std for image in images]  # normalize manually
     images = [tf.convert_to_tensor(image, dtype=tf.float32) for image in images]
-    print ("Stacked image ", tf.stack(images, axis=0).shape)
+    # print ("Stacked image ", tf.stack(images, axis=0).shape)
     return tf.stack(images, axis=0)
 
 # def process_images(
@@ -80,48 +80,83 @@ class PaligemmaProcessor():
         super(PaligemmaProcessor,self).__init__()
         self.image_seq_len = num_image_tokens
         self.image_size = image_size
-        # tokens_to_add = {"additional_special_tokens" : [IMAGE_TOKEN]}
-        # tokenizer.add_special_tokens(tokens_to_add)
-        # EXTRA_TOKENS = [
-        #     f"<loc{i:04d}" for i in range (1024)
-        # ]
-        #
-        # EXTRA_TOKENS += [
-        #     f"<seg{i:03d}" for i in range (128)
-        # ]
-        #
-        # tokenizer.add_tokens(EXTRA_TOKENS)
-        # self.image_token_id = tokenizer.convert_tokens_to_ids(IMAGE_TOKEN)
+        tokens_to_add = {"additional_special_tokens": [IMAGE_TOKEN]}
+        tokenizer.add_special_tokens(tokens_to_add)
         tokenizer.add_bos_token = False
         tokenizer.add_eos_token = False
         self.tokenizer = tokenizer
+        self.image_token_string = IMAGE_TOKEN
+        self.tokenizer = tokenizer
+
+    # def __call__(self, text, images, padding="max_length", truncation=True):
+    #     assert len(images) == 1 and len(text) == 1, f"Received {len(images)} images for {len(text)} prompts"
+    #     pixel_values = process_images(
+    #         images,
+    #         size=(self.image_size,self.image_size),
+    #         resample=Image.Resampling.BICUBIC,
+    #         rescale_factor = 1/255.0,
+    #         image_mean=IMAGENET_STD_MEAN,
+    #         image_std=IMAGENET_STD_STD
+    #     )
+    #     input_strings = [
+    #         add_image_token_to_prompt(
+    #             prefix_prompt=prompt,
+    #             bos_token=self.tokenizer.bos_token,
+    #             image_seq_len=self.image_seq_len,
+    #             image_token=self.image_token_string,
+    #
+    #         ) for prompt in text
+    #     ]
+    #     inputs = self.tokenizer(
+    #         input_strings,
+    #         return_tensors="tf",
+    #         padding=padding,
+    #         truncation=truncation
+    #     )
+    #     INCORRECT_ID = 257152
+    #     CORRECT_ID = 256000
+    #
+    #     inputs['input_ids'] = tf.where(
+    #         tf.equal(inputs['input_ids'], INCORRECT_ID),
+    #         CORRECT_ID,
+    #         inputs['input_ids']
+    #     )
+    #     # Assuming pixel_values is a tensor and inputs is a dictionary of tensors
+    #     return_data = {"pixel_values": pixel_values}
+    #     return_data.update(inputs)
+    #     return return_data
 
     def __call__(self, text, images, padding="max_length", truncation=True):
         assert len(images) == 1 and len(text) == 1, f"Received {len(images)} images for {len(text)} prompts"
+
         pixel_values = process_images(
             images,
-            size=(self.image_size,self.image_size),
+            size=(self.image_size, self.image_size),
             resample=Image.Resampling.BICUBIC,
-            rescale_factor = 1/255.0,
+            rescale_factor=1 / 255.0,
             image_mean=IMAGENET_STD_MEAN,
             image_std=IMAGENET_STD_STD
         )
-        input_strings = [
-            add_image_token_to_prompt(
-                prefix_prompt=prompt,
-                bos_token=self.tokenizer.bos_token,
-                image_seq_len=self.image_seq_len,
-                image_token=IMAGE_TOKEN,
 
-            ) for prompt in text
-        ]
-        inputs = self.tokenizer(
-            input_strings,
+        text_prompt = [f"{self.tokenizer.bos_token}{text[0]}\n"]
+
+        text_inputs = self.tokenizer(
+            text_prompt,
             return_tensors="tf",
-            padding=padding,
+            padding=False,
             truncation=truncation
         )
-        # Assuming pixel_values is a tensor and inputs is a dictionary of tensors
-        return_data = {"pixel_values": pixel_values}
-        return_data.update(inputs)
+
+        V_TOKEN_ID = 256000
+        v_tokens = tf.fill((1, self.image_seq_len), V_TOKEN_ID)  # Shape (1, 256)
+
+        input_ids = tf.concat([v_tokens, text_inputs['input_ids']], axis=-1)
+
+        attention_mask = tf.ones_like(input_ids, dtype=tf.int32)
+
+        return_data = {
+            "pixel_values": pixel_values,
+            "input_ids": input_ids,
+            "attention_mask": attention_mask
+        }
         return return_data

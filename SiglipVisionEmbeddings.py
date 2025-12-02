@@ -28,7 +28,7 @@ class SiglipVisionEmbeddings(tf.keras.Model):
         # self.position_ids = tf.expand_dims(tf.range(self.num_positions),axis=0)
 
     def call(self, pixel_values):
-        print("pixel_values.shape:", pixel_values.shape)
+        # print("pixel_values.shape:", pixel_values.shape)
         patch_embeds = self.patch_embedding(pixel_values)
         B, H_patch, W_patch, C_patch = tf.shape(patch_embeds)[0], tf.shape(patch_embeds)[1], tf.shape(patch_embeds)[2], \
         tf.shape(patch_embeds)[3]

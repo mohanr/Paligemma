@@ -119,7 +119,7 @@ def main(
         max_tokens_to_generate : int = 100,
         temparature : float = 0.8,
         top_p : float = 0.9,
-        do_sample : bool = False,
+        do_sample : bool = True,
         only_cpu : bool = False
 ):
     device = "cpu"

@@ -32,10 +32,10 @@ class PaliGemmaForConditionalGeneration(tf.keras.Model):
         sequence_length = tf.shape(input_ids)[1]
         embed_dim = tf.shape(image_features)[-1]
 
-        print(f' config.hidden_size {self.config.hidden_size}')
-        print(f' image_features {image_features}')
+        # print(f' config.hidden_size {self.config.hidden_size}')
+        # print(f' image_features {image_features}')
 
-        scaled_image_features = tf.divide( image_features, tf.sqrt(tf.cast(self.config.hidden_size,tf.float32)))
+        # scaled_image_features = tf.divide( image_features, tf.sqrt(tf.cast(self.config.hidden_size,tf.float32)))
         #Combine all the image tokens, text tokens and mask all the padding tokens
         final_embedding = tf.zeros((batch_size,sequence_length,embed_dim),dtype=input_embeds.dtype)
         text_mask = tf.not_equal(input_ids, self.config.image_token_index) & tf.not_equal(input_ids, self.pad_token_id)
@@ -47,24 +47,27 @@ class PaliGemmaForConditionalGeneration(tf.keras.Model):
         pad_mask_expanded = tf.expand_dims(pad_mask, axis=-1)
 
         final_embedding = tf.where(text_mask_expanded, input_embeds, final_embedding)
+        tf.print("Input IDs (snippet):", input_ids[0, 0:10], summarize=10)  # See what tokens are being fed
+        tf.print("Image Token Index:", self.image_token_index)
+        tf.print("Image Mask Sum (V-tokens found):", tf.reduce_sum(tf.cast(image_mask, tf.int32)))
 
         indices = tf.where(image_mask)
         if (tf.size(indices) > 0):
-            updates = tf.reshape(scaled_image_features, (-1,embed_dim))
+            updates = tf.reshape(image_features, (-1,embed_dim))
             image_scatter = tf.scatter_nd( indices, updates,(batch_size,sequence_length,embed_dim))
             final_embedding = tf.where(image_mask_expanded, image_scatter,final_embedding)
         final_embedding = tf.where(pad_mask_expanded, tf.zeros_like(final_embedding),final_embedding)
         q_len = tf.shape(input_embeds)[1]
         cache_len = kv_cache.num_items()
-        print("size:", cache_len)
+        # print("size:", cache_len)
         causal_mask = tf.cond(cache_len == 0,
             lambda : tf.fill( (batch_size, q_len, q_len), 0),
             lambda : tf.fill( (batch_size, q_len, tf.add(cache_len, q_len)), 0)
         )
         causal_mask = tf.expand_dims(causal_mask, axis=1)
-        print("attention_mask:", attention_mask)
+        # print("attention_mask:", attention_mask)
         position_ids = tf.math.cumsum(attention_mask, axis=-1)[:, -1]
-        print("position_ids:", tf.shape(position_ids))
+        # print("position_ids:", tf.shape(position_ids))
         if (kv_cache.num_items() > 1):
             shape_list = tf.shape(position_ids)
             if len(shape_list) == 1:
@@ -89,7 +92,7 @@ class PaliGemmaForConditionalGeneration(tf.keras.Model):
             selected_image_features = self.vision_tower(tf.cast(pixel_values,input_embeds.dtype))
             image_features = self.multi_modal_projector(selected_image_features)
 
-            image_features = tf.reduce_mean(image_features, axis=1, keepdims=True)
+            # image_features = tf.reduce_mean(image_features, axis=1, keepdims=True)
 
             embed_dim = tf.shape(image_features)[-1]
             input_dim = tf.shape(input_embeds)[-1]
