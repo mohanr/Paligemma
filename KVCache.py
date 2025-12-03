@@ -1,10 +1,11 @@
 import tensorflow as tf
 
 class KVCache:
-    def __init__(self):
+    def __init__(self, max_seq_len=2048):
         self.key_cache = {}
         self.value_cache = {}
-        self.sequence_len = 0   # global
+        self.sequence_len = 0
+        self.max_seq_len = max_seq_len
 
     def update(self, key_states, value_states, layer_idx):
         if layer_idx not in self.key_cache:

@@ -11,14 +11,17 @@ class GemmaForCausalLM(tf.keras.Model):
         self.config = config
         self.model = GemmaModel(config)
         self.vocab_size = config.vocab_size
-        self.lm_head = tf.keras.layers.Dense(config.hidden_size,
-                                            input_shape=config.vocab_size,
+        self.lm_head = tf.keras.layers.Dense(
+                                            units=config.vocab_size,
                                             activation=None, use_bias=False)
     def get_input_embeddings(self):
         return self.model.embed_tokens
 
+
     def tie_weights(self):
-        self.lm_head.kernel = self.model.embed_tokens.embeddings
+        lm_head_kernel = self.lm_head.kernel
+        embedding_tensor = self.model.embed_tokens.embeddings
+        lm_head_kernel.assign(tf.transpose( embedding_tensor))
 
     def call(self,
              attention_mask,

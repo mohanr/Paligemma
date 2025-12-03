@@ -12,6 +12,7 @@ class GemmaDecoderLayer(tf.keras.Model):
         self.hidden_size = config.hidden_size
         self.self_attn = GemmaAttention(config,layer_idx)
         self.mlp = GemmaMLP(config)
+        self.layer_idx=layer_idx
 
         self.input_layernorm = GemmaRMSNorm(config.hidden_size,config.rms_norm_eps)
         self.post_attention_layernorm = GemmaRMSNorm(config.hidden_size,config.rms_norm_eps)
@@ -21,17 +22,30 @@ class GemmaDecoderLayer(tf.keras.Model):
              attention_mask,
              position_ids,
              kv_cache):
-        residual = hidden_states
-        hidden_states = self.input_layernorm(hidden_states)
-        hidden_states,_ = self.self_attn(
-            hidden_states,
-            attention_mask,
-            position_ids,
-            kv_cache=kv_cache
-        )
-        hidden_states = residual + hidden_states
-        residual = hidden_states
-        hidden_states = self.post_attention_layernorm(hidden_states)
-        hidden_states = self.mlp(hidden_states)
-        hidden_states = residual + hidden_states
+        residual_attn = hidden_states
+
+        # 2. Pre-Normalization
+        normed_hidden_states = self.input_layernorm(hidden_states)
+
+        # 3. Self-Attention
+        attn_output, _ = self.self_attn(
+                                   normed_hidden_states,
+                                    attention_mask,
+                                    position_ids,
+                                    kv_cache=kv_cache
+                                )
+
+        print(f"L{self.layer_idx} Norm StdDev: {tf.math.reduce_std(normed_hidden_states):.6f}")
+        hidden_states = residual_attn + attn_output
+        print(f"L{self.layer_idx} Attn+Res StdDev: {tf.math.reduce_std(hidden_states):.6f}")
+
+
+        residual_mlp = hidden_states
+
+        normed_hidden_states = self.post_attention_layernorm(hidden_states)
+
+        mlp_output = self.mlp(normed_hidden_states)  # Use the new normed state
+
+        hidden_states = residual_mlp + mlp_output
+
         return hidden_states
