@@ -1,5 +1,6 @@
 import tensorflow as tf
 
+
 class GemmaRotaryEmbedding(tf.keras.Model):
     def __init__(self,
                  dim,
@@ -15,23 +16,22 @@ class GemmaRotaryEmbedding(tf.keras.Model):
 
         inv_freq = 1.0 / (base ** (freq_seq / half_dim))
 
-        self.inv_freq = tf.reshape(inv_freq, (1, 1, half_dim))
+        self.inv_freq = tf.reshape(inv_freq, (1, half_dim))
 
     def call(self, x, position_ids, seq_len=None, trainable=False):
-
-        b = tf.shape(x)[0]
-        l = tf.shape(x)[1]
-
         if len(position_ids.shape) == 1:
             position_ids = tf.expand_dims(position_ids, 0)
 
-        position_ids = tf.cast(position_ids, tf.float32)
+        position_ids = tf.cast(position_ids, tf.float32)  # (B, L)
 
-        inv = tf.squeeze(self.inv_freq, axis=0)
+        inv = self.inv_freq
 
-        freqs = tf.einsum("bl,ld->bld", position_ids, inv)
+        freqs = tf.einsum("bl,hd->bld", position_ids, inv)
+
         freqs = tf.concat([freqs, freqs], axis=-1)
-        cos = tf.cos(freqs)[:, None, :, :]   # (b, 1, l, half_dim)
-        sin = tf.sin(freqs)[:, None, :, :]   # (b, 1, l, half_dim)
+
+        cos = tf.expand_dims(tf.cos(freqs), axis=1)
+        sin = tf.expand_dims(tf.sin(freqs), axis=1)
+
 
         return cos, sin

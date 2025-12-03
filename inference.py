@@ -73,7 +73,7 @@ def test_inference(model,
     next_token_logits = outputs["logits"][:, -1, :]
     for _ in range(max_tokens_to_generate):
 
-        if do_sample:
+        if True:
             next_token = sample_top_p(next_token_logits, temperature=temperature, top_p=top_p)
         else:
             next_token = tf.math.argmax(next_token_logits, axis=-1)
@@ -139,6 +139,34 @@ def main(
     #     print("Model :", k.name,k.shape)
 
     tokenizer,model = load_gemma_tf_model(model)
+    print("\n--- Running Visual Stream Diagnostic ---")
+
+    # Define a dummy input image tensor
+    # (Shape: [Batch_size, Height, Width, Channels])
+    # Use the correct dimensions from your SiglipVisionConfig (e.g., 448x448x3)
+    img_input = tf.zeros((1, 448,448, 3),
+                         dtype=tf.float32)
+
+    try:
+        # A. Pass through the Vision Tower (ViT)
+        # The output is the patched image features (e.g., [1, 1024, 1152])
+        vit_output = model.vision_tower(img_input)
+
+        # B. Pass through the Multi-Modal Projector (MMP)
+        # The output is the visual tokens ready for the LLM (e.g., [1, 256, 2048])
+        visual_tokens = model.multi_modal_projector(vit_output)
+
+
+        # C. Inspect the values
+        mean_val = tf.reduce_mean(visual_tokens)
+        std_val = tf.math.reduce_std(visual_tokens)
+        max_val = tf.reduce_max(visual_tokens)
+
+        # Check for NaNs
+        has_nan = tf.reduce_any(tf.math.is_nan(visual_tokens))
+
+    except Exception as e:
+        print(f"DIAGNOSIS: Forward pass failed in vision path: {e}")
     num_image_tokens = model.config.vision_config.num_image_tokens
     processor = PaligemmaProcessor(tokenizer,num_image_tokens,image_size=model.config.vision_config.image_size)
 

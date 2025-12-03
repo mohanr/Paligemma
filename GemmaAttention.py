@@ -21,9 +21,9 @@ class GemmaAttention(tf.keras.Model):
 
         # assert tf.math.floormod(self.hidden_size, self.num_heads) == 0
         self.q_proj = tf.keras.layers.Dense(self.hidden_size,activation=None, use_bias=config.attention_bias)
-        self.k_proj=tf.keras.layers.Dense(self.num_key_value_heads * self.head_dim,activation=None, use_bias=config.attention_bias)
-        self.v_proj=tf.keras.layers.Dense(self.num_key_value_heads * self.head_dim,activation=None, use_bias=config.attention_bias)
-        self.o_proj= tf.keras.layers.Dense( self.num_heads * self.head_dim,activation=None, use_bias=config.attention_bias)
+        self.k_proj=tf.keras.layers.Dense(256,activation=None, use_bias=config.attention_bias)
+        self.v_proj=tf.keras.layers.Dense(256,activation=None, use_bias=config.attention_bias)
+        self.o_proj= tf.keras.layers.Dense( self.hidden_size,activation=None, use_bias=config.attention_bias)
 
         self.rotary_emb = GemmaRotaryEmbedding(
             self.head_dim,
@@ -42,14 +42,11 @@ class GemmaAttention(tf.keras.Model):
             return tf.concat([-x2,x1], axis=-1)
 
     def apply_rotary_pos_emb(self,q, k, cos, sin, unsqueeze_dim=1):
-            # cos = tf.expand_dims(cos, axis=1)
-            # sin = tf.expand_dims(sin, axis=1)
             q_embed = tf.add(tf.multiply(q,cos), tf.multiply(self.rotate(q) , sin ))
             k_embed =tf.add(tf.multiply(k,cos), tf.multiply(self.rotate(k) , sin ))
             return q_embed,k_embed
 
     def repeat_kv(self, x):
-        # x: [batch, num_kv_heads, seq, head_dim]
         return tf.repeat(x, repeats=self.num_key_value_groups, axis=1)
 
     def call(self,
@@ -81,15 +78,10 @@ class GemmaAttention(tf.keras.Model):
             query_states,key_states = self.apply_rotary_pos_emb(query_states,key_states,cos,sin)
             kv_cache.update(key_states,value_states,self.layer_idx)
 
-            past_k = kv_cache.key_cache[self.layer_idx]
-            past_v = kv_cache.value_cache[self.layer_idx]
-
-            # Slice to actual sequence length
-            seq_len = kv_cache.sequence_len
-            past_k = past_k[:, :, :seq_len, :]
-            past_v = past_v[:, :, :seq_len, :]
-            key_states = self.repeat_kv(past_k)
-            value_states = self.repeat_kv( past_v)
+            full_key_states = kv_cache.key_cache[self.layer_idx][:, :, :kv_cache.sequence_len, :]
+            full_value_states = kv_cache.value_cache[self.layer_idx][:, :, :kv_cache.sequence_len, :]
+            key_states = self.repeat_kv(full_key_states)
+            value_states = self.repeat_kv( full_value_states)
 
             attn_weights = tf.matmul(query_states, key_states, transpose_b=True)
             attn_weights = attn_weights / tf.math.sqrt(tf.cast(self.head_dim, tf.float32))
