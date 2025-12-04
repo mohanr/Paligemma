@@ -15,7 +15,7 @@ class KVCache:
                 tf.zeros_like(value_states), trainable=False)
 
         start = self.sequence_len
-        end   = start + key_states.shape[2]
+        end   = start + tf.shape(key_states)[2]
 
         self.key_cache[layer_idx][:, :, start:end, :].assign(key_states)
         self.value_cache[layer_idx][:, :, start:end, :].assign(value_states)

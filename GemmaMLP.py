@@ -18,12 +18,5 @@ class GemmaMLP(tf.keras.Model):
         u = self.up_proj(x)
         intermediate_product = g * u
 
-        CLIPPING_VALUE = 65504.0  # Maximum finite value for float16
-        intermediate_product = tf.clip_by_value(
-            intermediate_product,
-            clip_value_min=-CLIPPING_VALUE,
-            clip_value_max=CLIPPING_VALUE
-        )
-
         return self.down_proj(intermediate_product)
 

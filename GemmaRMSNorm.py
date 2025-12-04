@@ -14,5 +14,5 @@ class GemmaRMSNorm(tf.keras.Model):
 
     def call(self,x):
         output = self._norm(tf.cast(x,tf.float32))
-        output = output * (1 + tf.cast(self.weight, tf.float32))
+        output = output * tf.cast(self.weight, tf.float32)
         return tf.cast(output, x.dtype)

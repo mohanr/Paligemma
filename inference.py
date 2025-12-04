@@ -88,6 +88,7 @@ def test_inference(model,
 
         input_ids = next_token
         attention_mask = tf.concat([attention_mask, tf.ones((1,1),dtype=tf.int32)],axis=-1)
+        tf.print("Cache items BEFORE call:", kv_cache.num_items())
         outputs = model(
             input_ids=input_ids,
             pixel_values=None,
@@ -96,6 +97,7 @@ def test_inference(model,
         )
 
         kv_cache = outputs["kv_cache"]
+        tf.print("Cache items BEFORE call:", kv_cache.num_items())
         next_token_logits = outputs["logits"][:, -1, :]
 
     generated_tokens = tf.concat(generated_tokens, axis=-1)

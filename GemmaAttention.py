@@ -19,10 +19,9 @@ class GemmaAttention(tf.keras.Model):
         self.head_dim = config.head_dim
         self.is_causal = True
 
-        # assert tf.math.floormod(self.hidden_size, self.num_heads) == 0
         self.q_proj = tf.keras.layers.Dense(self.hidden_size,activation=None, use_bias=config.attention_bias)
-        self.k_proj=tf.keras.layers.Dense(256,activation=None, use_bias=config.attention_bias)
-        self.v_proj=tf.keras.layers.Dense(256,activation=None, use_bias=config.attention_bias)
+        self.k_proj=tf.keras.layers.Dense(self.num_key_value_heads * self.head_dim,activation=None, use_bias=config.attention_bias)
+        self.v_proj=tf.keras.layers.Dense(self.num_key_value_heads * self.head_dim,activation=None, use_bias=config.attention_bias)
         self.o_proj= tf.keras.layers.Dense( self.hidden_size,activation=None, use_bias=config.attention_bias)
 
         self.rotary_emb = GemmaRotaryEmbedding(
@@ -54,6 +53,8 @@ class GemmaAttention(tf.keras.Model):
                  attention_mask,
                  position_ids,
                  kv_cache):
+            if tf.rank(attention_mask) == 5:
+                attention_mask = tf.squeeze(attention_mask, axis=2)
             shape_list = tf.shape(hidden_states)
             bsz = shape_list[0]
             q_len = shape_list[1]
@@ -66,6 +67,10 @@ class GemmaAttention(tf.keras.Model):
                 query_states, (bsz, q_len, self.num_heads, self.head_dim)
             )
             query_states = tf.transpose(query_states, (0, 2, 1, 3))  # [B, 8, T, 256]
+            head_dim_sqrt = tf.math.sqrt(tf.cast(self.head_dim, tf.float32))
+
+
+            query_states = query_states / head_dim_sqrt
             key_states = tf.reshape(
                 key_states, (bsz, q_len, self.num_key_value_heads, self.head_dim)
             )
@@ -84,16 +89,31 @@ class GemmaAttention(tf.keras.Model):
             value_states = self.repeat_kv( full_value_states)
 
             attn_weights = tf.matmul(query_states, key_states, transpose_b=True)
-            attn_weights = attn_weights / tf.math.sqrt(tf.cast(self.head_dim, tf.float32))
-
-            # print("attn_weights:", attn_weights.shape)
-            # print("attention_mask:", attention_mask.shape)
-            # print("kv_len:", seq_len)
-            kv_len = tf.shape(kv_cache.key_cache[self.layer_idx])[2]
+            kv_len = tf.shape(key_states)[-2]  # Get the length dimension (1029)
 
             attention_mask = attention_mask[..., :kv_len]
+            mask_q_len = tf.shape(attention_mask)[-2]
+            mask_kv_len = tf.shape(attention_mask)[-1]
 
-            attn_weights = tf.add(attn_weights, tf.cast(attention_mask,tf.float32))
+            # Take last q_len queries and first kv_len keys
+            if mask_q_len > q_len:
+                attention_mask = attention_mask[..., -q_len:, :]
+            if mask_kv_len > kv_len:
+                attention_mask = attention_mask[..., :kv_len]
+            elif mask_kv_len < kv_len:
+                # Need to extend mask for generation
+                padding = tf.zeros([bsz, 1, q_len, kv_len - mask_kv_len], dtype=attention_mask.dtype)
+                attention_mask = tf.concat([attention_mask, padding], axis=-1)
+            neg_inf = tf.constant(-1e9, dtype=tf.float32)
+            if self.layer_idx == 0:
+                print("Attention mask sample:", attention_mask[0, 0, :5, :5].numpy())
+                print("Mask unique values:", tf.unique(tf.reshape(attention_mask, [-1]))[0].numpy())
+            attention_mask_additive = tf.where(
+                tf.equal(attention_mask, 0),
+                neg_inf,
+                tf.zeros_like(attention_mask, dtype=tf.float32)
+            )
+            attn_weights = tf.add(attn_weights, tf.cast(attention_mask_additive, tf.float32))
 
             attn_weights = tf.nn.softmax(attn_weights, axis=-1)
             attn_weights = tf.cast(attn_weights, dtype=query_states.dtype)
@@ -109,4 +129,7 @@ class GemmaAttention(tf.keras.Model):
             attn_output = tf.transpose(attn_output, perm=[0,2,1,3])
             attn_output = tf.reshape(attn_output, (bsz, q_len, self.num_heads * self.head_dim))
             attn_output = self.o_proj(attn_output)
+            print(f"Attn output stats: mean={tf.reduce_mean(attn_output):.4f}, "
+                  f"std={tf.math.reduce_std(attn_output):.4f}, "
+                  f"max={tf.reduce_max(tf.abs(attn_output)):.4f}")
             return attn_output, attn_weights
