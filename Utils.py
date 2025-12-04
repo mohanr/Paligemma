@@ -1,6 +1,6 @@
 import torch
 from transformers import PaliGemmaForConditionalGeneration, AutoTokenizer
-
+import numpy as np
 import h5py  # Ensure this import is at the top of Utils.py
 
 
@@ -11,6 +11,7 @@ def load_vision_layer(tf_layer, state_dict, i):
     # PyTorch layer prefix for ViT
     prefix = f"model.vision_tower.vision_model.encoder.layers.{i}."
     def load_and_assign_vision(pyt_key, tf_var, transpose=False):  # Default to NO transpose
+
         try:
             tensor = state_dict[prefix + pyt_key].cpu().numpy()
             tf_tensor = tf.convert_to_tensor(tensor)
@@ -61,13 +62,14 @@ def load_layer(tf_layer, state_dict, i):
     prefix = f"model.language_model.layers.{i}."
 
     def load_and_assign(pyt_key, tf_var, transpose=True):
+
         try:
             tensor = state_dict[prefix + pyt_key].cpu().numpy()
-            print(f"DEBUG: Layer {i} Key: {pyt_key}, Pytorch Shape: {tensor.shape}")  # <-- ADD THIS
+            # print(f"DEBUG: Layer {i} Key: {pyt_key}, Pytorch Shape: {tensor.shape}")
             tf_tensor = tf.convert_to_tensor(tensor,dtype=tf.float32)
 
-            if pyt_key == "mlp.down_proj.weight":
-                print(f"DEBUG: Pytorch Shape for {pyt_key}: {tensor.shape}")
+            # if pyt_key == "mlp.down_proj.weight":
+            #     print(f"DEBUG: Pytorch Shape for {pyt_key}: {tensor.shape}")
 
             if transpose:
                 tf_tensor = tf.transpose(tf_tensor)
@@ -89,8 +91,8 @@ def load_layer(tf_layer, state_dict, i):
     load_and_assign("self_attn.v_proj.weight", tf_layer.self_attn.v_proj.kernel,transpose=True)
     load_and_assign("self_attn.o_proj.weight", tf_layer.self_attn.o_proj.kernel,transpose=True)
 
-    load_and_assign("input_layernorm.weight", tf_layer.input_layernorm.weight, transpose=False)
-    load_and_assign("post_attention_layernorm.weight", tf_layer.post_attention_layernorm.weight, transpose=False)
+    load_and_assign("input_layernorm.weight", tf_layer.input_layernorm.weight, transpose=True)
+    load_and_assign("post_attention_layernorm.weight", tf_layer.post_attention_layernorm.weight, transpose=True)
 
     load_and_assign("mlp.gate_proj.weight", tf_layer.mlp.gate_proj.kernel,transpose=True)
     load_and_assign("mlp.up_proj.weight", tf_layer.mlp.up_proj.kernel,transpose=True)
@@ -106,6 +108,7 @@ def load_gemma_tf_model(tf_model):
     )
     state_dict = hf_model.state_dict()
     embed_tensor = state_dict["model.language_model.embed_tokens.weight"].cpu().numpy()
+
     tf_model.language_model.model.embed_tokens.embeddings.assign(
         tf.convert_to_tensor(embed_tensor)
     )

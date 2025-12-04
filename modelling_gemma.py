@@ -31,15 +31,19 @@ class PaliGemmaForConditionalGeneration(tf.keras.Model):
         batch_size = tf.shape(input_ids)[0]
         sequence_length = tf.shape(input_ids)[1]
         embed_dim = tf.shape(image_features)[-1]
+        tf.print("Shape of initial input_embeds:", tf.shape(input_embeds))
 
         # print(f' config.hidden_size {self.config.hidden_size}')
         # print(f' image_features {image_features}')
 
-        # scaled_image_features = tf.divide( image_features, tf.sqrt(tf.cast(self.config.hidden_size,tf.float32)))
-        #Combine all the image tokens, text tokens and mask all the padding tokens
         final_embedding = tf.zeros((batch_size,sequence_length,embed_dim),dtype=input_embeds.dtype)
         text_mask = tf.not_equal(input_ids, self.config.image_token_index) & tf.not_equal(input_ids, self.pad_token_id)
         image_mask = tf.equal(input_ids, self.image_token_index)
+        tf.print("Image Mask (first 10 tokens):", image_mask[0, 0:10])
+        image_mask = tf.equal(input_ids, self.image_token_index)
+        tf.print("Image Mask DType:", image_mask.dtype)
+        tf.print("Image Mask Shape:", tf.shape(image_mask))
+        indices = tf.where(image_mask)
         pad_mask = tf.equal(input_ids, self.pad_token_id)
 
         text_mask_expanded = tf.expand_dims(text_mask, axis=-1)
@@ -52,30 +56,64 @@ class PaliGemmaForConditionalGeneration(tf.keras.Model):
         tf.print("Image Mask Sum (V-tokens found):", tf.reduce_sum(tf.cast(image_mask, tf.int32)))
 
         indices = tf.where(image_mask)
+        print("Update indices ", tf.size(indices))
         if (tf.size(indices) > 0):
             updates = tf.reshape(image_features, (-1,embed_dim))
+            updates = tf.reshape(image_features, (-1, embed_dim))
+
+            tf.print("--- Image Feature Statistics ---")
+            tf.print("Mean:", tf.reduce_mean(image_features))
+            tf.print("Min:", tf.reduce_min(image_features))
+            tf.print("Max:", tf.reduce_max(image_features))
+
+            print("Indices", updates)
+            # ... rest of the code ...
+            print("Indices",updates)
             image_scatter = tf.scatter_nd( indices, updates,(batch_size,sequence_length,embed_dim))
             final_embedding = tf.where(image_mask_expanded, image_scatter,final_embedding)
         final_embedding = tf.where(pad_mask_expanded, tf.zeros_like(final_embedding),final_embedding)
         q_len = tf.shape(input_embeds)[1]
         cache_len = kv_cache.num_items()
-        # print("size:", cache_len)
-        causal_mask = tf.cond(cache_len == 0,
-            lambda : tf.fill( (batch_size, q_len, q_len), 0),
-            lambda : tf.fill( (batch_size, q_len, tf.add(cache_len, q_len)), 0)
-        )
+
+        neg_inf = tf.constant(-1e9, dtype=tf.float32)
+
+        if cache_len == 0:
+            mask_shape = (q_len, q_len)
+
+            causal_mask_bool = tf.linalg.band_part(tf.ones(mask_shape, dtype=tf.bool), -1, 0)
+
+            causal_mask_bool = tf.logical_not(causal_mask_bool)
+
+            additive_mask = tf.where(causal_mask_bool, neg_inf, tf.zeros(mask_shape, dtype=tf.float32))
+
+            causal_mask = tf.expand_dims(additive_mask, axis=0)  # [1, q_len, q_len]
+            causal_mask = tf.expand_dims(causal_mask, axis=1)  # [1, 1, q_len, q_len]
+
+        else:
+            kv_len = tf.add(cache_len, q_len)
+
+            causal_mask = tf.fill((batch_size, 1, q_len, kv_len), 0.0)
+            causal_mask = tf.cast(causal_mask, tf.float32)
+
         causal_mask = tf.expand_dims(causal_mask, axis=1)
-        # print("attention_mask:", attention_mask)
-        position_ids = tf.math.cumsum(attention_mask, axis=-1)[:, -1]
-        # print("position_ids:", tf.shape(position_ids))
-        if (kv_cache.num_items() > 1):
-            shape_list = tf.shape(position_ids)
-            if len(shape_list) == 1:
-                position_ids = tf.expand_dims(position_ids, axis=0)
-            else:
-                cumsum = tf.math.cumsum(attention_mask, axis=-1)
-                mask = tf.equal(attention_mask , 0)
-                position_ids = tf.where(mask, tf.ones_like(cumsum), cumsum)
+        sequence_length = tf.shape(final_embedding)[1]
+
+        position_ids = tf.range(start=0, limit=sequence_length, dtype=tf.int32)
+
+        position_ids = tf.expand_dims(position_ids, axis=0)
+        if kv_cache.num_items() > 1 and tf.shape(input_ids)[1] == 1:
+            position_offset = kv_cache.num_items()
+
+            position_ids = tf.range(start=position_offset,
+                                    limit=position_offset + 1,
+                                    dtype=tf.int32)
+
+            position_ids = tf.expand_dims(position_ids, axis=0)
+
+        tf.print("Shape of attention_mask BEFORE return:", tf.shape(attention_mask))
+        tf.print("Shape of input_embeds BEFORE return:", tf.shape(input_embeds))
+        tf.print("Shape of position_ids BEFORE return:", tf.shape(position_ids))
+
         return final_embedding, causal_mask, position_ids,kv_cache
 
     def call(self,
@@ -88,11 +126,10 @@ class PaliGemmaForConditionalGeneration(tf.keras.Model):
         # tf.print("pixel_values.shape :", tf.shape(pixel_values))
         input_embeddding_layer = self.language_model.get_input_embeddings()
         input_embeds = input_embeddding_layer(input_ids)
+
         if pixel_values is not None:
             selected_image_features = self.vision_tower(tf.cast(pixel_values,input_embeds.dtype))
             image_features = self.multi_modal_projector(selected_image_features)
-
-            # image_features = tf.reduce_mean(image_features, axis=1, keepdims=True)
 
             embed_dim = tf.shape(image_features)[-1]
             input_dim = tf.shape(input_embeds)[-1]
@@ -124,7 +161,14 @@ class PaliGemmaForConditionalGeneration(tf.keras.Model):
             )
             causal_mask = tf.expand_dims(causal_mask, axis=1)
             position_ids = tf.math.cumsum(attention_mask, axis=-1)[:, -1]
-
+        tf.print("Position IDs (snippet):", position_ids[0:10], summarize=10)
+        tf.print("Position IDs (around Image Tokens):", position_ids[1020:1040], summarize=20)
+        tf.print("Total Sequence Length:",tf.shape(position_ids)[0])
+        if tf.rank(attention_mask) == 2:
+            attention_mask = tf.expand_dims(attention_mask, axis=1)  # [1, 1, 1030]
+            attention_mask = tf.expand_dims(attention_mask, axis=1)  # [1, 1, 1, 1030]
+        tf.print("Input Embeds Mean:", tf.reduce_mean(input_embeds))
+        tf.print("Input Embeds Std:", tf.math.reduce_std(input_embeds))
         outputs=self.language_model(
             attention_mask,
             position_ids,

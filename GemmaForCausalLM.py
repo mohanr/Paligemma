@@ -28,6 +28,7 @@ class GemmaForCausalLM(tf.keras.Model):
              position_ids,
              inputs_embeds,
              kv_cache):
+
         outputs = self.model(attention_mask,
                              position_ids,
                              inputs_embeds,

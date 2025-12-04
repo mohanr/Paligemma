@@ -24,19 +24,16 @@ class GemmaDecoderLayer(tf.keras.Model):
              kv_cache):
         residual_attn = hidden_states
 
-        # 2. Pre-Normalization
         normed_hidden_states = self.input_layernorm(hidden_states)
 
-        # 3. Self-Attention
         attn_output, _ = self.self_attn(
                                    normed_hidden_states,
                                     attention_mask,
                                     position_ids,
                                     kv_cache=kv_cache
                                 )
-
         print(f"L{self.layer_idx} Norm StdDev: {tf.math.reduce_std(normed_hidden_states):.6f}")
-        hidden_states = residual_attn + attn_output
+        hidden_states = residual_attn + attn_output * (1.0 / tf.math.sqrt(tf.cast(18, tf.float32)))
         print(f"L{self.layer_idx} Attn+Res StdDev: {tf.math.reduce_std(hidden_states):.6f}")
 
 
@@ -44,8 +41,7 @@ class GemmaDecoderLayer(tf.keras.Model):
 
         normed_hidden_states = self.post_attention_layernorm(hidden_states)
 
-        mlp_output = self.mlp(normed_hidden_states)  # Use the new normed state
-
-        hidden_states = residual_mlp + mlp_output
+        mlp_output = self.mlp(normed_hidden_states)
+        hidden_states = residual_mlp + mlp_output * (1.0 / tf.math.sqrt(tf.cast(18, tf.float32)))
 
         return hidden_states
