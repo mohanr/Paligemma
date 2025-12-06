@@ -119,7 +119,7 @@ def main(
         prompt : str = None,
         image_file_path : str = None,
         max_tokens_to_generate : int = 100,
-        temparature : float = 0.8,
+        temperature : float = 0.8,
         top_p : float = 0.9,
         do_sample : bool = True,
         only_cpu : bool = False
