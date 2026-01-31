@@ -10,9 +10,9 @@ class SiglipEncoder(tf.keras.Model):
         self._layers = [SiglipEncoderLayer(config) for _ in range(config.num_hidden_layers)]
 
 
+
     def call(self, inputs_embeds):
         hidden_states = inputs_embeds
-        for encoder_layer in self.layers :
+        for i, encoder_layer in enumerate(self._layers):
             hidden_states = encoder_layer(hidden_states)
         return hidden_states
-

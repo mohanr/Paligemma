@@ -1,8 +1,7 @@
 #!/bin/bash
 
-MODEL_PATH="/Users/anu/PycharmProjects/Siglip/gemma-keras-gemma_1.1_instruct_2b_en-v3"
-PROMPT="this building is "
-IMAGE_FILE_PATH="/Users/anu/PycharmProjects/Siglip/P.jpeg"
+PROMPT="What is this?"
+IMAGE_FILE_PATH="/Users/anu/PycharmProjects/Siglip/000000039769.jpg"
 MAX_TOKENS_TO_GENERATE=100
 TEMPERATURE=0.8
 TOP_P=0.9

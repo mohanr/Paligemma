@@ -11,12 +11,12 @@ class GemmaRotaryEmbedding(tf.keras.Model):
         self.max_position_embeddings = max_position_embeddings
         self.base = base
 
-        half_dim = dim // 2
-        freq_seq = tf.range(half_dim, dtype=tf.float32)
+        self.half_dim = dim // 2
+        freq_seq = tf.range(self.half_dim, dtype=tf.float32)
 
-        inv_freq = 1.0 / (base ** (freq_seq / half_dim))
+        inv_freq = 1.0 / (base ** (freq_seq / self.half_dim))
 
-        self.inv_freq = tf.reshape(inv_freq, (1, half_dim))
+        self.inv_freq = tf.reshape(inv_freq, (1, self.half_dim))
 
     def call(self, x, position_ids, seq_len=None, trainable=False):
         if len(position_ids.shape) == 1:
@@ -25,8 +25,9 @@ class GemmaRotaryEmbedding(tf.keras.Model):
         position_ids = tf.cast(position_ids, tf.float32)  # (B, L)
 
         inv = self.inv_freq
-
-        freqs = tf.einsum("bl,hd->bld", position_ids, inv)
+        inv_freq = tf.reshape(self.inv_freq, (self.half_dim,))  # Shape: (half_dim,)
+        freqs = tf.einsum("bl,d->bld", position_ids, inv_freq)
+        # freqs = tf.einsum("bl,hd->bld", position_ids, inv)
 
         freqs = tf.concat([freqs, freqs], axis=-1)
 

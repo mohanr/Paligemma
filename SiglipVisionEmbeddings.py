@@ -14,7 +14,8 @@ class SiglipVisionEmbeddings(tf.keras.Model):
                 kernel_size=config.patch_size,  # Same as kernel_size in PyTorch
                 strides=config.patch_size,  # Same as stride in PyTorch
                 padding='valid',  # Same as padding in PyTorch
-                data_format="channels_last"
+                data_format="channels_last",
+                use_bias=True
             )
 
         num_patches_per_side = self.image_size // self.patch_size
