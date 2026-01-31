@@ -6,7 +6,7 @@ class PaliGemmaConfig:
                  vision_config=None,
                  text_config=None,
                  ignore_index=-100,
-                 image_token_index=256000,
+                 image_token_index=257152,
                  # vocab_size=257152,
                  vocab_size=257216,
                  projection_dim=2304,
@@ -25,7 +25,7 @@ class PaliGemmaConfig:
         self.pad_token_id = pad_token_id
         self.vocab_size=vocab_size
         # self.num_image_tokens= (self.image_size // self.patch_size) ** 2
-        self.num_image_tokens= (224 // 16) ** 2
+        self.num_image_tokens= (448 // 16) ** 2
         self.vision_config = SiglipVisionConfig(
             hidden_size=1152,
             projection_dim=self.projection_dim

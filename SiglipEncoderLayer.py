@@ -14,12 +14,19 @@ class SiglipEncoderLayer(tf.keras.Model):
         self.layer_norm2 = tf.keras.layers.LayerNormalization(axis=-1, epsilon=config.layer_norm_eps)
 
     def call(self, hidden_states):
+
+
         residual = hidden_states
         hidden_states = self.layer_norm1(hidden_states)
         hidden_states, _ = self.self_attn(hidden_states)
         hidden_states = residual + hidden_states
         residual = hidden_states
         hidden_states = self.layer_norm2(hidden_states)
+        # ADD THIS:
+        tf.print(f"After norm2 std: {tf.math.reduce_std(hidden_states)}")
+
         hidden_states = self.mlp(hidden_states)
         hidden_states = residual + hidden_states
+        tf.print(f"  residual std: {tf.math.reduce_std(residual)}")
+        tf.print(f"  mlp output std: {tf.math.reduce_std(hidden_states)}")
         return hidden_states
