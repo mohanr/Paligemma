@@ -7,12 +7,10 @@ class PaliGemmaConfig:
                  text_config=None,
                  ignore_index=-100,
                  image_token_index=257152,
-                 # vocab_size=257152,
                  vocab_size=257216,
-                 projection_dim=2304,
-                 # hidden_size=2048,
+                 projection_dim=2048,
                  hidden_size=2048,
-                 pad_token_id=None,
+                 pad_token_id=0,
                  **kwargs):
         super().__init__()
         self.ignore_index = ignore_index
@@ -24,8 +22,7 @@ class PaliGemmaConfig:
         self.is_encoder_decoder = False
         self.pad_token_id = pad_token_id
         self.vocab_size=vocab_size
-        # self.num_image_tokens= (self.image_size // self.patch_size) ** 2
-        self.num_image_tokens= (448 // 16) ** 2
+        self.num_image_tokens = (448 // 14) ** 2
         self.vision_config = SiglipVisionConfig(
             hidden_size=1152,
             projection_dim=self.projection_dim

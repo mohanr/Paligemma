@@ -32,7 +32,7 @@ class GemmaDecoderLayer(tf.keras.Model):
                                     position_ids,
                                     kv_cache=kv_cache
                                 )
-        hidden_states = residual_attn + attn_output * (1.0 / tf.math.sqrt(tf.cast(18, tf.float32)))
+        hidden_states = residual_attn + attn_output
 
 
         residual_mlp = hidden_states
@@ -40,6 +40,6 @@ class GemmaDecoderLayer(tf.keras.Model):
         normed_hidden_states = self.post_attention_layernorm(hidden_states)
 
         mlp_output = self.mlp(normed_hidden_states)
-        hidden_states = residual_mlp + mlp_output * (1.0 / tf.math.sqrt(tf.cast(18, tf.float32)))
+        hidden_states = residual_mlp + mlp_output
 
         return hidden_states

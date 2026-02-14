@@ -1,8 +1,8 @@
 #!/bin/bash
 
-PROMPT="What is this?"
+PROMPT="answer en What is this?"
 IMAGE_FILE_PATH="/Users/anu/PycharmProjects/Siglip/000000039769.jpg"
-MAX_TOKENS_TO_GENERATE=100
+MAX_TOKENS_TO_GENERATE=10
 TEMPERATURE=0.8
 TOP_P=0.9
 DO_SAMPLE="False"

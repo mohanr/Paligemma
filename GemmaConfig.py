@@ -5,15 +5,15 @@ class GemmaConfig:
                  hidden_size=2048,
                  intermediate_size=16384,
                  num_hidden_layers=18,
-                 num_attention_heads=16,
-                 num_key_value_heads=2,
-                 head_dim=128,
+                 num_attention_heads=8,
+                 num_key_value_heads=1,
+                 head_dim=256,
                  max_position_embeddings=8192,
                  rms_norm_eps=1e-6,
                  rope_theta=10000,
                  attention_bias=False,
                  attention_dropout=0.0,
-                 pad_token_id=None):
+                 pad_token_id=0):
         super().__init__()
         self.vocab_size=vocab_size
         self.max_position_embeddings=max_position_embeddings

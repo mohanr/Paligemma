@@ -12,16 +12,16 @@ class SiglipAttention(tf.keras.Model):
         self.dropout = config.attention_dropout
         self.k_proj = tf.keras.layers.Dense(self.embed_dim,
                                             input_shape=(self.embed_dim,),
-                                            activation=None, use_bias=False)
+                                            activation=None, use_bias=True)  # Changed to True
         self.q_proj = tf.keras.layers.Dense(self.embed_dim,
                                             input_shape=(self.embed_dim,),
-                                            activation=None, use_bias=False)
+                                            activation=None, use_bias=True)  # Changed to True
         self.v_proj = tf.keras.layers.Dense(self.embed_dim,
                                             input_shape=(self.embed_dim,),
-                                            activation=None, use_bias=False)
+                                            activation=None, use_bias=True)  # Changed to True
         self.o_proj = tf.keras.layers.Dense(self.embed_dim,
                                             input_shape=(self.embed_dim,),
-                                            activation=None, use_bias=False)
+                                            activation=None, use_bias=True)  # Changed to True
 
     def call(self, hidden_states):
         batch_size = tf.shape(hidden_states)[0]
