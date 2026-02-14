@@ -9,10 +9,19 @@ class SiglipEncoderLayer(tf.keras.Model):
         self.config = config
         self.embed_dim = config.hidden_size
         self.self_attn = SiglipAttention(config)
-        self.layer_norm1 = tf.keras.layers.LayerNormalization(axis=-1,epsilon=config.layer_norm_eps)
+        self.layer_norm1 = tf.keras.layers.LayerNormalization(
+            axis=-1,
+            epsilon=config.layer_norm_eps,
+            center=True,
+            scale=True
+        )
         self.mlp = SiglipMLP(config)
-        self.layer_norm2 = tf.keras.layers.LayerNormalization(axis=-1, epsilon=config.layer_norm_eps)
-
+        self.layer_norm2 = tf.keras.layers.LayerNormalization(
+            axis=-1,
+            epsilon=config.layer_norm_eps,
+            center=True,
+            scale=True
+        )
     def call(self, hidden_states):
 
 

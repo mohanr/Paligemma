@@ -56,6 +56,10 @@ def load_vision_layer(tf_layer, state_dict, i):
     load_and_assign_vision("self_attn.k_proj.weight", tf_layer.self_attn.k_proj.kernel, transpose=True)
     load_and_assign_vision("self_attn.v_proj.weight", tf_layer.self_attn.v_proj.kernel, transpose=True)
     load_and_assign_vision("self_attn.out_proj.weight", tf_layer.self_attn.o_proj.kernel, transpose=True)
+    load_and_assign_vision("self_attn.q_proj.bias", tf_layer.self_attn.q_proj.bias, transpose=False)
+    load_and_assign_vision("self_attn.k_proj.bias", tf_layer.self_attn.k_proj.bias, transpose=False)
+    load_and_assign_vision("self_attn.v_proj.bias", tf_layer.self_attn.v_proj.bias, transpose=False)
+    load_and_assign_vision("self_attn.out_proj.bias", tf_layer.self_attn.o_proj.bias, transpose=False)
     load_and_assign_vision("mlp.fc1.weight", tf_layer.mlp.fc1.kernel, transpose=True)
     load_and_assign_vision("mlp.fc1.bias", tf_layer.mlp.fc1.bias, transpose=False)
     load_and_assign_vision("mlp.fc2.weight", tf_layer.mlp.fc2.kernel, transpose=True)
@@ -211,7 +215,7 @@ def load_gemma_tf_model(tf_model):
     print(f"TF shape: {tf_pos.shape}")
     print(f"First 5 values match: {np.allclose(pt_pos[0, :5], tf_pos[0, :5])}")
     print(f"All values match: {np.allclose(pt_pos, tf_pos)}")
-    num_vision_layers = 24
+    num_vision_layers = len(tf_model.vision_tower.vision_model.encoder._layers)
     for i in range(num_vision_layers):
         load_vision_layer(tf_model.vision_tower.vision_model.encoder._layers[i], state_dict, i)
 

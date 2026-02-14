@@ -12,7 +12,11 @@ class GemmaModel(tf.keras.Model):
         self.config = config
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
-        self.embed_tokens = Embedding(config.vocab_size,config.hidden_size,self.padding_idx)
+        self.embed_tokens = Embedding(
+            input_dim=config.vocab_size,
+            output_dim=config.hidden_size,
+            mask_zero=False,
+        )
         print(f"Creating {config.num_hidden_layers} decoder layers")
         self.net = tf.keras.Sequential(
             layers=[
@@ -30,7 +34,9 @@ class GemmaModel(tf.keras.Model):
              position_ids,
              inputs_embeds,
              kv_cache):
-        hidden_states = inputs_embeds
+        # HF Gemma scales token embeddings by sqrt(hidden_size) before decoder layers.
+        normalizer = tf.cast(tf.math.sqrt(tf.cast(self.config.hidden_size, inputs_embeds.dtype)), inputs_embeds.dtype)
+        hidden_states = inputs_embeds * normalizer
 
         for decoder_layer in self.net.layers:
             hidden_states = decoder_layer(

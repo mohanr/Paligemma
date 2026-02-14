@@ -1,5 +1,6 @@
 import tensorflow as tf
-from GemmaRotaryEmbedding import  GemmaRotaryEmbedding
+from GemmaRotaryEmbedding import GemmaRotaryEmbedding
+
 
 class GemmaAttention(tf.keras.Model):
     def __init__(self,
@@ -13,32 +14,34 @@ class GemmaAttention(tf.keras.Model):
         self.hidden_size = config.hidden_size
         self.num_heads = config.num_attention_heads
         self.num_key_value_heads = config.num_key_value_heads
-        self.num_key_value_groups = tf.math.floordiv(self.num_heads , self.num_key_value_heads )
+        self.num_key_value_groups = tf.math.floordiv(self.num_heads, self.num_key_value_heads)
         self.max_position_embeddings = config.max_position_embeddings
         self.rope_theta = config.rope_theta
         self.head_dim = config.head_dim
         self.is_causal = True
 
-        self.q_proj = tf.keras.layers.Dense(self.hidden_size,activation=None, use_bias=config.attention_bias)
-        self.k_proj=tf.keras.layers.Dense(self.num_key_value_heads * self.head_dim,activation=None, use_bias=config.attention_bias)
-        self.v_proj=tf.keras.layers.Dense(self.num_key_value_heads * self.head_dim,activation=None, use_bias=config.attention_bias)
-        self.o_proj= tf.keras.layers.Dense( self.hidden_size,activation=None, use_bias=config.attention_bias)
+        self.q_proj = tf.keras.layers.Dense(self.hidden_size, activation=None, use_bias=config.attention_bias)
+        self.k_proj = tf.keras.layers.Dense(self.num_key_value_heads * self.head_dim, activation=None,
+                                            use_bias=config.attention_bias)
+        self.v_proj = tf.keras.layers.Dense(self.num_key_value_heads * self.head_dim, activation=None,
+                                            use_bias=config.attention_bias)
+        self.o_proj = tf.keras.layers.Dense(self.hidden_size, activation=None, use_bias=config.attention_bias)
 
         self.rotary_emb = GemmaRotaryEmbedding(
             self.head_dim,
             max_position_embeddings=self.max_position_embeddings,
-            base = self.rope_theta
+            base=self.rope_theta
         )
 
-    def rotate(self,x):
-            # last dimension
-            last_dim_size = tf.shape(x)[-1]
+    def rotate(self, x):
+        # last dimension
+        last_dim_size = tf.shape(x)[-1]
 
-            # midpoint
-            midpoint = last_dim_size // 2
-            x1 = x[..., :midpoint]
-            x2 = x[..., midpoint:]
-            return tf.concat([-x2,x1], axis=-1)
+        # midpoint
+        midpoint = last_dim_size // 2
+        x1 = x[..., :midpoint]
+        x2 = x[..., midpoint:]
+        return tf.concat([-x2, x1], axis=-1)
 
     def apply_rotary_pos_emb(self, q, k, cos, sin, unsqueeze_dim=1):
 
@@ -53,8 +56,28 @@ class GemmaAttention(tf.keras.Model):
             k_embed = None
 
         return q_embed, k_embed
+
     def repeat_kv(self, x):
-        return tf.repeat(x, repeats=self.num_key_value_groups, axis=1)
+        # x shape: [batch, num_kv_heads, seq_len, head_dim]
+        # Need to repeat each KV head num_key_value_groups times
+        # PyTorch uses repeat_interleave, TF needs manual implementation
+
+        batch, num_kv_heads, slen, head_dim = tf.unstack(tf.shape(x))
+
+        if self.num_key_value_groups == 1:
+            return x
+
+        # Expand and reshape to interleave repetitions
+        # [batch, num_kv_heads, 1, seq_len, head_dim]
+        x = tf.expand_dims(x, axis=2)
+
+        # [batch, num_kv_heads, num_key_value_groups, seq_len, head_dim]
+        x = tf.tile(x, [1, 1, self.num_key_value_groups, 1, 1])
+
+        # [batch, num_kv_heads * num_key_value_groups, seq_len, head_dim]
+        x = tf.reshape(x, [batch, num_kv_heads * self.num_key_value_groups, slen, head_dim])
+
+        return x
 
     def call(self, hidden_states, attention_mask, position_ids, kv_cache):
         self._cache_updated = False
@@ -165,15 +188,9 @@ class GemmaAttention(tf.keras.Model):
                 # Truncate mask on the q dimension
                 attention_mask = attention_mask[..., -q_len:, :]
 
-        # Convert mask to additive form
-        neg_inf = tf.constant(-1e9, dtype=attn_weights.dtype)
-        attention_mask_additive = tf.where(
-            tf.equal(attention_mask, 0),
-            neg_inf,
-            tf.zeros_like(attention_mask, dtype=attn_weights.dtype)
-        )
-
-        attn_weights = attn_weights + attention_mask_additive
+        # `attention_mask` is expected to already be additive:
+        # 0.0 for allowed positions and a large negative value for masked ones.
+        attn_weights = attn_weights + tf.cast(attention_mask, attn_weights.dtype)
 
         attn_weights = tf.nn.softmax(attn_weights, axis=-1)
         attn_weights = tf.cast(attn_weights, dtype=query_states.dtype)

@@ -4,14 +4,14 @@ class SiglipVisionConfig():
     def __init__(self,
                  hidden_size = 1152,
                  intermediate_size = 4304,
-                 num_hidden_layers = 24,
+                 num_hidden_layers = 27,
                  num_attention_heads = 16,
                  num_channels = 3,
                  image_size = 448,
                  patch_size = 14,
                  layer_norm_eps = 1e-6,
                  attention_dropout = 0.0,
-                 projection_dim=2304,
+                 projection_dim=2048,
                  num_image_tokens : int = 1024,
                  max_position_embeddings=1024
                  ):
