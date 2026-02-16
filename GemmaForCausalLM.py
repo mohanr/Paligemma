@@ -43,7 +43,6 @@ class GemmaForCausalLM(tf.keras.Model):
         last_hidden = hidden_states[:, -1, :].numpy()
         np.save('/Users/anu/PycharmProjects/Siglip/tf_last_hidden.npy', last_hidden[0])
 
-        tf.print("=== BEFORE LM HEAD ===")
         tf.print("Hidden states shape:", tf.shape(hidden_states))
         tf.print("Hidden states mean:", tf.reduce_mean(hidden_states))
         tf.print("Hidden states std:", tf.math.reduce_std(hidden_states))

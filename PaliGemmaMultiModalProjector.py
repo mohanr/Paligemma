@@ -13,14 +13,10 @@ class PaliGemmaMultiModalProjector(tf.keras.layers.Layer):
         )
 
     def call(self, image_features):
-        print(f"\n=== PROJECTOR DEBUG ===")
-        print(f"Input std: {tf.math.reduce_std(image_features).numpy():.6f}")
-        print(f"Input [0,0,:5]: {image_features[0, 0, :5].numpy()}")
 
         # Check if layer is built and has weights
         print(f"Layer built: {self.linear.built}")
         if hasattr(self.linear, 'kernel'):
-            print(f"Kernel exists: True")
             print(f"Kernel shape: {self.linear.kernel.shape}")
             print(f"Kernel std: {tf.math.reduce_std(self.linear.kernel).numpy():.6f}")
             print(f"Bias std: {tf.math.reduce_std(self.linear.bias).numpy():.6f}")

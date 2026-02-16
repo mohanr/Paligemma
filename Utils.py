@@ -37,11 +37,10 @@ def load_vision_layer(tf_layer, state_dict, i):
     print(
         f"Layer {i} norm1 gamma shape: {tf_layer.layer_norm1.gamma.shape if hasattr(tf_layer.layer_norm1, 'gamma') else 'NOT BUILT'}")
 
-    if i == 0:  # Only print for first layer
+    if i == 0:
         tf_gamma = tf_layer.layer_norm1.gamma.numpy()
         tf_beta = tf_layer.layer_norm1.beta.numpy()
 
-        print(f"\n=== LAYER {i} NORM1 VERIFICATION ===")
         print(f"PyTorch gamma shape: {ln1_gamma.shape}")
         print(f"TF gamma shape: {tf_gamma.shape}")
         print(f"PyTorch gamma[:5]: {ln1_gamma[:5]}")
@@ -76,8 +75,6 @@ def load_layer(tf_layer, state_dict, i):
             # print(f"DEBUG: Layer {i} Key: {pyt_key}, Pytorch Shape: {tensor.shape}")
             tf_tensor = tf.convert_to_tensor(tensor, dtype=tf.float32)
 
-            # if pyt_key == "mlp.down_proj.weight":
-            #     print(f"DEBUG: Pytorch Shape for {pyt_key}: {tensor.shape}")
 
             if transpose:
                 tf_tensor = tf.transpose(tf_tensor)
@@ -199,7 +196,7 @@ def load_gemma_tf_model(tf_model):
         patch_bias
     ])
 
-    print("\n=== BIAS VERIFICATION ===")
+
     loaded = tf_model.vision_tower.vision_model.embeddings.patch_embedding.bias.numpy()
     print(f"Expected: {patch_bias[:5]}")
     print(f"Loaded: {loaded[:5]}")
@@ -208,7 +205,7 @@ def load_gemma_tf_model(tf_model):
         tf.convert_to_tensor(
             state_dict["model.vision_tower.vision_model.embeddings.position_embedding.weight"].cpu().numpy())
     )
-    print("\n=== POSITION EMBEDDING VERIFICATION ===")
+
     pt_pos = state_dict["model.vision_tower.vision_model.embeddings.position_embedding.weight"].cpu().numpy()
     tf_pos = tf_model.vision_tower.vision_model.embeddings.position_embedding.embeddings.numpy()
     print(f"PyTorch shape: {pt_pos.shape}")
@@ -232,7 +229,7 @@ def load_gemma_tf_model(tf_model):
         post_norm_beta
     ])
 
-    print("\n=== CHECKING WHAT WE JUST ASSIGNED ===")
+
     print(f"weights[0] name: {tf_model.vision_tower.vision_model.post_layernorm.weights[0].name}")
     print(f"weights[1] name: {tf_model.vision_tower.vision_model.post_layernorm.weights[1].name}")
     print(f"Has gamma attr? {hasattr(tf_model.vision_tower.vision_model.post_layernorm, 'gamma')}")
@@ -245,13 +242,6 @@ def load_gemma_tf_model(tf_model):
     tf_gamma = tf_model.vision_tower.vision_model.post_layernorm.gamma.numpy()
     tf_beta = tf_model.vision_tower.vision_model.post_layernorm.beta.numpy()
 
-    print(f"PyTorch gamma[:5]: {pt_gamma[:5]}")
-    print(f"TF gamma[:5]: {tf_gamma[:5]}")
-    print(f"Gamma match: {np.allclose(pt_gamma, tf_gamma)}")
-    print(f"PyTorch beta[:5]: {pt_beta[:5]}")
-    print(f"TF beta[:5]: {tf_beta[:5]}")
-    print(f"Beta match: {np.allclose(pt_beta, tf_beta)}")
-    print("\n=== BUILDING PROJECTOR ===")
     dummy_input = tf.zeros((1, 1024, 1152), dtype=tf.float32)
     _ = tf_model.multi_modal_projector(dummy_input)
     print(f"Projector built with kernel shape: {tf_model.multi_modal_projector.linear.kernel.shape}")
@@ -267,7 +257,7 @@ def load_gemma_tf_model(tf_model):
         projection_tensor.T,  # kernel (transposed)
         bias_tensor  # bias
     ])
-    print("\n=== PROJECTOR WEIGHT VERIFICATION ===")
+
     loaded_weight = tf_model.multi_modal_projector.linear.kernel.numpy()
     print(f"PyTorch projector shape: {projection_tensor.shape}")
     print(f"TF projector shape (after transpose): {loaded_weight.shape}")

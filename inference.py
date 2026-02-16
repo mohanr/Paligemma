@@ -18,7 +18,7 @@ def get_model_inputs(processor,
     images = [image]
     prompts = [prompt]
     model_inputs = processor(text=prompts, images=images)
-    print("\n=== IMAGE PREPROCESSING DEBUG ===")
+
     print(f"Pixel values shape: {model_inputs['pixel_values'].shape}")
     print(f"Pixel values mean: {tf.reduce_mean(model_inputs['pixel_values'])}")
     print(f"Pixel values std: {tf.math.reduce_std(model_inputs['pixel_values'])}")
@@ -80,8 +80,8 @@ def test_inference(model,
     attention_mask = model_inputs["attention_mask"]
     pixel_values = model_inputs["pixel_values"]
 
-    # DEBUG: Print input_ids to compare with PyTorch
-    print("\n=== INPUT IDS DEBUG ===")
+
+
     print(f"Input IDs shape: {input_ids.shape}")
     print(f"Input IDs (first 30): {input_ids.numpy()[0, :30]}")
     print(f"Input IDs (last 10): {input_ids.numpy()[0, -10:]}")
@@ -110,7 +110,7 @@ def test_inference(model,
     logits_tensor = next_token_logits[0]
     logits_min = tf.reduce_min(logits_tensor)
     logits_max = tf.reduce_max(logits_tensor)
-    tf.print(f"STEP 1 LOGIT DIAGNOSTIC (Raw Logits):")
+
     tf.print(f"  Min Logit: {logits_min:.4f}, Max Logit: {logits_max:.4f}")
     top_logits, top_indices = tf.math.top_k(logits_tensor, k=5)
     tf.print(f"  Top 5 Raw Logits: {top_logits.numpy()}")
@@ -144,7 +144,6 @@ def test_inference(model,
         pass
     else:
         for i in range(max_tokens_to_generate - 1):
-            print(f"\n=== Generation step {i + 1} ===")
 
             input_ids = next_token
             attention_mask = tf.concat([attention_mask, tf.ones((1, 1), dtype=tf.int32)], axis=-1)
@@ -234,7 +233,7 @@ def main(
         training=False)
     tokenizer, model = load_gemma_tf_model(model)
     # After: tokenizer, model = load_gemma_tf_model(model)
-    print("\n=== TENSORFLOW EMBEDDINGS ===")
+
     tf_embed_cats = model.language_model.model.embed_tokens.embeddings.numpy()[34371]
     tf_embed_comma = model.language_model.model.embed_tokens.embeddings.numpy()[235269]
 
@@ -243,27 +242,13 @@ def main(
     print(f"TF embedding norm for 'cats': {np.linalg.norm(tf_embed_cats):.6f}")
     print(f"TF embedding norm for ',': {np.linalg.norm(tf_embed_comma):.6f}")
 
-    print("\n=== COMPARISON ===")
     print(
         f"PyTorch 'cats' [:10]: [ 0.33346865  0.00137039 -0.05751126  0.12262455 -0.02193636  0.11118821  0.09834561  0.10248051 -0.07931319 -0.16288337]")
     print(f"TF 'cats' [:10]:      {tf_embed_cats[:10]}")
     print(
         f"Match? {np.allclose(tf_embed_cats[:10], [0.33346865, 0.00137039, -0.05751126, 0.12262455, -0.02193636, 0.11118821, 0.09834561, 0.10248051, -0.07931319, -0.16288337], atol=1e-5)}")
-    # img_input = tf.zeros((1, 448,448, 3),
-    #                      dtype=tf.float32)
-    #
-    # try:
-    #     vit_output = model.vision_tower(img_input)
-    #
-    #     visual_tokens = model.multi_modal_projector(vit_output)
-    #
-    # except Exception as e:
-    #     print(f"DIAGNOSIS: Forward pass failed in vision path: {e}")
     num_image_tokens = model.config.vision_config.num_image_tokens
     processor = PaligemmaProcessor(tokenizer, num_image_tokens, image_size=model.config.vision_config.image_size)
-    print("\n=== PRE-INFERENCE POST_NORM CHECK ===")
-    print(f"Post norm gamma[:5]: {model.vision_tower.vision_model.post_layernorm.gamma.numpy()[:5]}")
-    print(f"Post norm beta[:5]: {model.vision_tower.vision_model.post_layernorm.beta.numpy()[:5]}")
 
     test_inference(model,
                    processor,
