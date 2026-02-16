@@ -19,7 +19,7 @@ class SiglipMLP(tf.keras.layers.Layer):
         if not self.fc2.built:
             self.fc2.build((None, self.config.intermediate_size))
 
-        # DEBUG: Print first time this is called
+
         tf.print("MLP called - input[0,0,:3]:", hidden_states[0, 0, :3])
         tf.print("MLP fc1.kernel[0,:3]:", self.fc1.kernel[0, :3])
         tf.print("MLP fc1.bias[:3]:", self.fc1.bias[:3])
